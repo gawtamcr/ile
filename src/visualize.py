@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from main import DiffeomorphicFlow, generate_logical_trajectory
+from main import DiffeomorphicFlow, generate_trajectory
 
 # ── Reproducibility ──────────────────────────────────────────────────────────
 torch.manual_seed(42)
@@ -13,8 +13,10 @@ phi = DiffeomorphicFlow(layers=4)
 start_state        = [-4.0,  4.0]
 target_latent      = [ 0.0,  0.0]
 
-z_traj, x_traj = generate_logical_trajectory(
-    phi, start_state, target_latent, steps=100, alpha=0.05
+z_target_t = torch.tensor([target_latent], dtype=torch.float32)
+loss_fn    = lambda z: torch.norm(z - z_target_t) ** 2
+z_traj, x_traj = generate_trajectory(
+    phi, start_state, loss_fn, steps=100, alpha=0.05
 )
 
 z_arr = np.array(z_traj)   # (101, 2)

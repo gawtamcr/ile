@@ -58,18 +58,17 @@ class DiffeomorphicFlow(nn.Module):
         return z
 
 
-def generate_logical_trajectory(flow_model, x_start, z_target, steps=100, alpha=0.05):
+def generate_trajectory(flow_model, x_start, loss_function, steps=100, alpha=0.05):
     """
-    Implements the STL 'Eventually' operator via latent gradient flow.
+    Generates a trajectory via latent gradient flow on a given loss function.
 
-    Runs gradient descent on U(z) = ||z - z*||² in latent space Z.
+    Runs gradient descent on U(z) = loss_function(z) in latent space Z.
     Each iterate is pulled back to physical space X via the exact inverse φ⁻¹.
     """
     flow_model.eval()
 
     x_current = torch.tensor(x_start,  dtype=torch.float32).unsqueeze(0)
     z_current = flow_model(x_current).detach()
-    z_target  = torch.tensor(z_target, dtype=torch.float32).unsqueeze(0)
 
     latent_trajectory   = [z_current.squeeze().numpy()]
     physical_trajectory = [x_current.squeeze().numpy()]
@@ -77,15 +76,15 @@ def generate_logical_trajectory(flow_model, x_start, z_target, steps=100, alpha=
     for _ in range(steps):
         z_current.requires_grad_(True)
 
-        loss   = torch.norm(z_current - z_target) ** 2
+        loss   = loss_function(z_current)
         grad_z = torch.autograd.grad(loss, z_current)[0]
 
         with torch.no_grad():
             z_current = z_current - alpha * grad_z
             x_next    = flow_model.inverse(z_current)
 
-            latent_trajectory.append(z_current.squeeze().numpy())
-            physical_trajectory.append(x_next.squeeze().numpy())
+        latent_trajectory.append(z_current.squeeze().numpy())
+        physical_trajectory.append(x_next.squeeze().numpy())
 
     return latent_trajectory, physical_trajectory
 
@@ -94,9 +93,10 @@ if __name__ == "__main__":
     torch.manual_seed(42)
     phi = DiffeomorphicFlow(layers=4)
 
-    start_state          = [-4.0, 4.0]
-    target_latent_region = [0.0,  0.0]
+    start_state = [-4.0, 4.0]
+    z_target    = torch.tensor([[0.0, 0.0]], dtype=torch.float32)
+    loss_fn     = lambda z: torch.norm(z - z_target) ** 2
 
-    z_traj, x_traj = generate_logical_trajectory(phi, start_state, target_latent_region)
+    z_traj, x_traj = generate_trajectory(phi, start_state, loss_fn)
     print(f"Final latent state:   {z_traj[-1]}")
     print(f"Final physical state: {x_traj[-1]}")

@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import Normalize
 
-from main          import DiffeomorphicFlow, generate_logical_trajectory
-from stl_operators import generate_compositional_trajectory, smooth_max, smooth_min
+from main          import DiffeomorphicFlow, generate_trajectory
+from stl_operators import smooth_max, smooth_min
 
 # ── Shared setup ──────────────────────────────────────────────────────────────
 torch.manual_seed(42)
@@ -28,15 +28,18 @@ STEPS    = 150
 ALPHA    = 0.05
 BETA     = 10.0
 
-# ── Run all three trajectories ────────────────────────────────────────────────
-z_ev,  x_ev  = generate_logical_trajectory(
-    phi, START, Z_SINGLE, steps=STEPS, alpha=ALPHA)
+# ── Define loss functions and run trajectories ────────────────────────────────
+zS_t = torch.tensor([Z_SINGLE], dtype=torch.float32)
+zA_t = torch.tensor([Z_A],      dtype=torch.float32)
+zB_t = torch.tensor([Z_B],      dtype=torch.float32)
 
-z_or,  x_or  = generate_compositional_trajectory(
-    phi, START, Z_A, Z_B, operator="OR",  steps=STEPS, alpha=ALPHA, beta=BETA)
+loss_ev  = lambda z: torch.norm(z - zS_t) ** 2
+loss_or  = lambda z: smooth_min(torch.norm(z - zA_t) ** 2, torch.norm(z - zB_t) ** 2, BETA)
+loss_and = lambda z: smooth_max(torch.norm(z - zA_t) ** 2, torch.norm(z - zB_t) ** 2, BETA)
 
-z_and, x_and = generate_compositional_trajectory(
-    phi, START, Z_A, Z_B, operator="AND", steps=STEPS, alpha=ALPHA, beta=BETA)
+z_ev,  x_ev  = generate_trajectory(phi, START, loss_ev,  steps=STEPS, alpha=ALPHA)
+z_or,  x_or  = generate_trajectory(phi, START, loss_or,  steps=STEPS, alpha=ALPHA)
+z_and, x_and = generate_trajectory(phi, START, loss_and, steps=STEPS, alpha=ALPHA)
 
 z_ev  = np.array(z_ev);  x_ev  = np.array(x_ev)
 z_or  = np.array(z_or);  x_or  = np.array(x_or)
@@ -48,10 +51,6 @@ lim  = 5.5
 ls   = np.linspace(-lim, lim, fine)
 Zgx, Zgy = np.meshgrid(ls, ls)
 Zg = torch.tensor(np.stack([Zgx.ravel(), Zgy.ravel()], 1), dtype=torch.float32)
-
-zA_t = torch.tensor([Z_A],      dtype=torch.float32)
-zB_t = torch.tensor([Z_B],      dtype=torch.float32)
-zS_t = torch.tensor([Z_SINGLE], dtype=torch.float32)
 
 with torch.no_grad():
     u_single = torch.norm(Zg - zS_t, dim=1) ** 2
