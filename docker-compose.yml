@@ -1,0 +1,17 @@
+services:
+  telograf-simple:
+    image: diffusion
+    container_name: ile-test
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: bash -c "
+      cd src/ &&
+      python -B combined_viz.py"
+    stdin_open: true
+    tty: true
+    runtime: nvidia
