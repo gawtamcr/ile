@@ -11,7 +11,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
     command: bash -c "
       cd src/ &&
-      python -B visualize_temporal.py"
+      python -B main.py"
     stdin_open: true
     tty: true
     runtime: nvidia

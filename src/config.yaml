@@ -1,0 +1,29 @@
+seed: 42
+
+flow:
+  layers: 4
+  hidden_dim: 64
+
+scenario:
+  start_state: [-4.0, -4.0]
+  target_A: [0.0, 0.0]      # Reach A
+  target_B: [-2.0, -2.0]    # Avoid B
+
+stl:
+  reach_interval: [0.0, 1.0]
+  reach_margin: 0.0
+  avoid_interval: [0.0, 1.0]
+  avoid_margin: 1.0
+  temporal_k: 5.0
+  and_beta: 10.0
+
+planner:
+  t_span: [0.0, 1.0]
+  steps: 150
+  alpha_lr: 0.05
+  cbf_gamma: 0.1
+
+viz:
+  figsize: [16, 10]
+  grid_n: 20
+  grid_limits: [-6, 6]
