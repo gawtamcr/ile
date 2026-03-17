@@ -1,4 +1,4 @@
-seed: 52
+seed: 40
 
 flow:
   layers: 6
@@ -14,10 +14,10 @@ scenario:
     B2: [2.0, 0.0]
 
 stl:
-  reach_margin: 0.0
-  avoid_margin: 1.0
-  temporal_k: 10.0
-  and_beta: 10.0
+  reach_initial_radius: 15.0
+  reach_final_radius: 0.5
+  avoid_margin: 2.0
+  and_beta: 20.0
   intervals:
     A1: [60.0, 100.0]
     A2: [0.0, 60.0]
@@ -27,8 +27,7 @@ stl:
 planner:
   t_span: [0.0, 100.0]
   steps: 300
-  alpha_lr: 0.05
-  cbf_gamma: 5
+  cbf_gamma: 5.0
 
 viz:
   figsize: [16, 10]
