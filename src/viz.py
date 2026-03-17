@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 
-def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, target_A, target_B, avoid_margin=1.0, figsize=(16, 10), grid_n=20, grid_limits=(-6, 6)):
+def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, reach_targets, avoid_targets, avoid_margin=1.0, figsize=(16, 10), grid_n=20, grid_limits=(-6, 6)):
     fig = plt.figure(figsize=figsize, constrained_layout=True)
     fig.suptitle("STL Planning: Eventually Reach A [0,10] while Always Avoiding B [0,10]", 
                  fontsize=16, fontweight="bold")
@@ -12,8 +12,8 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, target_A, t
 
     # Precompute target preimages for physical space tracking
     with torch.no_grad():
-        x_star_A = phi.inverse(torch.tensor([target_A], dtype=torch.float32)).squeeze().numpy()
-        x_star_B = phi.inverse(torch.tensor([target_B], dtype=torch.float32)).squeeze().numpy()
+        x_stars_reach = {name: phi.inverse(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in reach_targets.items()}
+        x_stars_avoid = {name: phi.inverse(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in avoid_targets.items()}
         
     z_start = z_traj[0]
 
@@ -22,12 +22,13 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, target_A, t
     ax1.set_title("Physical Space X Trajectory")
     sc1 = ax1.scatter(x_traj[:, 0], x_traj[:, 1], c=time_steps, cmap="plasma", s=20, zorder=3)
     ax1.plot(*start_state, "g^", markersize=10, zorder=5, label="Start")
-    ax1.plot(*x_star_A, "b*", markersize=12, zorder=5, label="Target A (Reach)")
-    ax1.plot(*x_star_B, "rx", markersize=12, zorder=5, label="Target B (Avoid)")
     
-    # Approximate avoidance margin visualization in physical space 
-    circle_B = plt.Circle((x_star_B[0], x_star_B[1]), np.sqrt(avoid_margin), color='r', fill=False, linestyle='--', alpha=0.5)
-    ax1.add_patch(circle_B)
+    for name, pos in x_stars_reach.items():
+        ax1.plot(*pos, "b*", markersize=12, zorder=5, label=f"Reach {name}")
+    for name, pos in x_stars_avoid.items():
+        ax1.plot(*pos, "rx", markersize=12, zorder=5, label=f"Avoid {name}")
+        circle = plt.Circle((pos[0], pos[1]), np.sqrt(avoid_margin), color='r', fill=False, linestyle='--', alpha=0.5)
+        ax1.add_patch(circle)
     
     ax1.set_xlabel("x1"); ax1.set_ylabel("x2")
     ax1.legend(); ax1.grid(True, alpha=0.3)
@@ -38,12 +39,13 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, target_A, t
     ax2.set_title("Latent Space Z Trajectory")
     sc2 = ax2.scatter(z_traj[:, 0], z_traj[:, 1], c=time_steps, cmap="plasma", s=20, zorder=3)
     ax2.plot(*z_start, "g^", markersize=10, zorder=5, label="Start")
-    ax2.plot(*target_A, "b*", markersize=12, zorder=5, label="Target A")
-    ax2.plot(*target_B, "rx", markersize=12, zorder=5, label="Target B")
     
-    # Margin in Latent Space 
-    circle_B_z = plt.Circle((target_B[0], target_B[1]), np.sqrt(avoid_margin), color='r', fill=False, linestyle='--', alpha=0.8, label="Avoid Margin")
-    ax2.add_patch(circle_B_z)
+    for name, pos in reach_targets.items():
+        ax2.plot(*pos, "b*", markersize=12, zorder=5, label=f"Reach {name}")
+    for name, pos in avoid_targets.items():
+        ax2.plot(*pos, "rx", markersize=12, zorder=5, label=f"Avoid {name}")
+        circle = plt.Circle((pos[0], pos[1]), np.sqrt(avoid_margin), color='r', fill=False, linestyle='--', alpha=0.8)
+        ax2.add_patch(circle)
 
     ax2.set_xlabel("z1"); ax2.set_ylabel("z2")
     ax2.legend(); ax2.grid(True, alpha=0.3)
@@ -76,8 +78,12 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, target_A, t
     # 4. Convergence / Distance over Time
     ax4 = fig.add_subplot(gs[1, 1])
     ax4.set_title("Distance to Targets over Time (Latent Space)")
-    ax4.plot(time_steps, np.linalg.norm(z_traj - np.array(target_A), axis=1), color="blue", linewidth=2, label="||z(t) - z_A|| (Reach)")
-    ax4.plot(time_steps, np.linalg.norm(z_traj - np.array(target_B), axis=1), color="red", linewidth=2, label="||z(t) - z_B|| (Avoid)")
+    
+    for name, pos in reach_targets.items():
+        ax4.plot(time_steps, np.linalg.norm(z_traj - np.array(pos), axis=1), linewidth=2, label=f"||z(t) - z_{name}||")
+    for name, pos in avoid_targets.items():
+        ax4.plot(time_steps, np.linalg.norm(z_traj - np.array(pos), axis=1), linewidth=2, linestyle=':', label=f"||z(t) - z_{name}||")
+        
     ax4.axhline(np.sqrt(avoid_margin), color="red", linestyle="--", alpha=0.5, label="Avoid Margin Limit")
     
     ax4.set_xlabel("Time t"); ax4.set_ylabel("Distance")

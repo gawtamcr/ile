@@ -1,27 +1,34 @@
-seed: 42
+seed: 52
 
 flow:
-  layers: 4
+  layers: 6
   hidden_dim: 64
 
 scenario:
   start_state: [-4.0, -4.0]
-  target_A: [0.0, 0.0]      # Reach A
-  target_B: [-2.0, -2.0]    # Avoid B
+  reach_targets:
+    A2: [0.0, 0.0]
+    A1: [4.0, 4.0]
+  avoid_targets:
+    B1: [-2.0, -2.0]
+    B2: [2.0, 0.0]
 
 stl:
-  reach_interval: [0.0, 1.0]
   reach_margin: 0.0
-  avoid_interval: [0.0, 1.0]
   avoid_margin: 1.0
-  temporal_k: 5.0
+  temporal_k: 10.0
   and_beta: 10.0
+  intervals:
+    A1: [60.0, 100.0]
+    A2: [0.0, 60.0]
+    B1: [0.0, 100.0]
+    B2: [0.0, 100.0]
 
 planner:
-  t_span: [0.0, 1.0]
-  steps: 150
+  t_span: [0.0, 100.0]
+  steps: 300
   alpha_lr: 0.05
-  cbf_gamma: 0.1
+  cbf_gamma: 5
 
 viz:
   figsize: [16, 10]

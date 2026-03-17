@@ -19,13 +19,15 @@ if __name__ == "__main__":
 
     # Start and Target Configurations
     start_state = config["scenario"]["start_state"]
-    target_A = config["scenario"]["target_A"]
-    target_B = config["scenario"]["target_B"]
+    reach_tgts = config["scenario"]["reach_targets"]
+    avoid_tgts = config["scenario"]["avoid_targets"]
 
-    # 2. Define STL Formula Programmatically: 
+    # 2. Define Complex STL Formula: F[0:90](A1) ∧ F[40:80](A2) ∧ G[0:100](¬B1) ∧ G[0:100](¬B2)
     formula = And(
-        Eventually(Reach(target_A, margin=config["stl"]["reach_margin"]), interval=config["stl"]["reach_interval"], k=config["stl"]["temporal_k"]),
-        Avoid(target_B, margin=config["stl"]["avoid_margin"], interval=config["stl"]["avoid_interval"], k=config["stl"]["temporal_k"]),
+        Eventually(Reach(reach_tgts["A1"], margin=config["stl"]["reach_margin"]), interval=config["stl"]["intervals"]["A1"], k=config["stl"]["temporal_k"]),
+        Eventually(Reach(reach_tgts["A2"], margin=config["stl"]["reach_margin"]), interval=config["stl"]["intervals"]["A2"], k=config["stl"]["temporal_k"]),
+        Avoid(avoid_tgts["B1"], margin=config["stl"]["avoid_margin"], interval=config["stl"]["intervals"]["B1"], k=config["stl"]["temporal_k"]),
+        Avoid(avoid_tgts["B2"], margin=config["stl"]["avoid_margin"], interval=config["stl"]["intervals"]["B2"], k=config["stl"]["temporal_k"]),
         beta=config["stl"]["and_beta"]
     )
     
@@ -46,7 +48,7 @@ if __name__ == "__main__":
     
     # 4. Visualize the diffeomorphism, temporal convergence, and trajectories
     plot_full_analysis(
-        phi, z_traj, x_traj, time_steps, start_state, target_A, target_B,
+        phi, z_traj, x_traj, time_steps, start_state, reach_tgts, avoid_tgts,
         avoid_margin=config["stl"]["avoid_margin"],
         figsize=tuple(config["viz"]["figsize"]),
         grid_n=config["viz"]["grid_n"],

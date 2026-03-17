@@ -75,14 +75,15 @@ class Eventually(STLNode):
         return torch.tensor(1.0)
 
 class And(STLNode):
-    def __init__(self, left, right, beta=10.0):
-        self.left = left
-        self.right = right
+    def __init__(self, *children, beta=10.0):
+        self.children = children
         self.beta = beta
         
     def compute_loss(self, z, t):
-        return (1.0 / self.beta) * torch.logaddexp(self.beta * self.left.compute_loss(z, t), self.beta * self.right.compute_loss(z, t))
+        losses = torch.stack([child.compute_loss(z, t) for child in self.children])
+        return (1.0 / self.beta) * torch.logsumexp(self.beta * losses, dim=0)
         
     def compute_h(self, z, t):
-        # Both h1 >= 0 and h2 >= 0 must hold -> use smooth_min for CBF intersection
-        return -(1.0 / self.beta) * torch.logaddexp(-self.beta * self.left.compute_h(z, t), -self.beta * self.right.compute_h(z, t))
+        # All h_i >= 0 must hold -> use smooth_min for N-ary CBF intersection
+        hs = torch.stack([child.compute_h(z, t) for child in self.children])
+        return -(1.0 / self.beta) * torch.logsumexp(-self.beta * hs, dim=0)
