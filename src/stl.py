@@ -15,7 +15,7 @@ class Avoid(STLNode):
         return torch.norm(z - self.target, dim=-1)**2 - self.margin
 
 class Eventually(STLNode):
-    def __init__(self, target, t_end, initial_radius=15.0, final_radius=0.5):
+    def __init__(self, target, t_end, initial_radius=20.0, final_radius=0.5):
         self.target = torch.tensor(target, dtype=torch.float32)
         self.t_end = t_end
         self.r_start = initial_radius

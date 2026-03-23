@@ -5,13 +5,13 @@ flow:
   hidden_dim: 64
 
 scenario:
-  start_state: [-4.0, -4.0]
+  start_state: [-5.0, -5.0]
   reach_targets:
     A2: [0.0, 0.0]
     A1: [4.0, 4.0]
   avoid_targets:
     B1: [-2.0, -2.0]
-    B2: [2.0, 0.0]
+    B2: [1.0, 4.0]
 
 stl:
   reach_initial_radius: 15.0
@@ -30,6 +30,6 @@ planner:
   cbf_gamma: 5.0
 
 viz:
-  figsize: [16, 10]
+  figsize: [13, 10]
   grid_n: 20
-  grid_limits: [-6, 6]
+  grid_limits: [-6.0, 6.0]

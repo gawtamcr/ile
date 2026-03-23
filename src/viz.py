@@ -30,6 +30,11 @@ def plot_manifold_level_sets(ax, phi, formula, space='Z', t_eval=0.0, grid_limit
         # Compute the global composed barrier function
         h_vals = formula.compute_h(z_pts, t_tensor)
         
+        # Compute individual predicate manifolds if composed
+        child_h_vals = []
+        if hasattr(formula, 'children'):
+            child_h_vals = [child.compute_h(z_pts, t_tensor) for child in formula.children]
+        
     H_grid = h_vals.numpy().reshape(grid_n, grid_n)
 
     # Plot the strict zero-level set boundary (h = 0)
@@ -38,6 +43,11 @@ def plot_manifold_level_sets(ax, phi, formula, space='Z', t_eval=0.0, grid_limit
     
     # Fill the valid region (h > 0) to highlight the safe manifold
     ax.contourf(Xg, Yg, H_grid, levels=[0.01, np.inf], colors='magenta', alpha=0.1, zorder=1)
+    
+    # Plot individual predicate manifolds
+    for child_h in child_h_vals:
+        child_H_grid = child_h.numpy().reshape(grid_n, grid_n)
+        ax.contour(Xg, Yg, child_H_grid, levels=[0.01], colors='gray', linewidths=1.0, zorder=1, linestyles='dotted', alpha=0.8)
     
     return contour
 
@@ -50,10 +60,10 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, reach_targe
                  fontsize=16, fontweight="bold")
     gs = gridspec.GridSpec(2, 2, figure=fig)
 
-    # Precompute target preimages for physical space tracking
+    # 1. Forward map the physical targets to latent coordinates for Z-space tracking
     with torch.no_grad():
-        x_stars_reach = {name: phi.inverse(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in reach_targets.items()}
-        x_stars_avoid = {name: phi.inverse(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in avoid_targets.items()}
+        z_stars_reach = {name: phi(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in reach_targets.items()}
+        z_stars_avoid = {name: phi(torch.tensor([pos], dtype=torch.float32)).squeeze().numpy() for name, pos in avoid_targets.items()}
         
     z_start = z_traj[0]
 
@@ -61,15 +71,14 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, reach_targe
     ax1 = fig.add_subplot(gs[0, 0])
     ax1.set_title("Physical Space $\mathcal{X}$: Diffeomorphic Pullback")
     
-    # Plot the composed logic manifold pulled back to physical space at t=0
     plot_manifold_level_sets(ax1, phi, formula, space='X', t_eval=time_steps[0], grid_limits=grid_limits, grid_n=100)
-    
     sc1 = ax1.scatter(x_traj[:, 0], x_traj[:, 1], c=time_steps, cmap="viridis", s=15, zorder=4)
     ax1.plot(*start_state, "g^", markersize=10, zorder=5, label="Start")
     
-    for name, pos in x_stars_reach.items():
+    # Plot raw config targets directly in physical space
+    for name, pos in reach_targets.items():
         ax1.plot(*pos, "b*", markersize=12, zorder=5, label=f"Reach {name}")
-    for name, pos in x_stars_avoid.items():
+    for name, pos in avoid_targets.items():
         ax1.plot(*pos, "rx", markersize=12, zorder=5, label=f"Avoid {name}")
     
     ax1.set_xlabel("$x_1$"); ax1.set_ylabel("$x_2$")
@@ -80,21 +89,19 @@ def plot_full_analysis(phi, z_traj, x_traj, time_steps, start_state, reach_targe
     ax2 = fig.add_subplot(gs[0, 1])
     ax2.set_title("Latent Space $\mathcal{Z}$: Native Geometric Logic")
     
-    # Plot the composed logic manifold in its native latent topology at t=0
     plot_manifold_level_sets(ax2, phi, formula, space='Z', t_eval=time_steps[0], grid_limits=grid_limits, grid_n=100)
-    
     sc2 = ax2.scatter(z_traj[:, 0], z_traj[:, 1], c=time_steps, cmap="viridis", s=15, zorder=4)
     ax2.plot(*z_start, "g^", markersize=10, zorder=5, label="Start")
     
-    for name, pos in reach_targets.items():
+    # Plot forward-mapped targets in latent space
+    for name, pos in z_stars_reach.items():
         ax2.plot(*pos, "b*", markersize=12, zorder=5, label=f"Reach {name}")
-    for name, pos in avoid_targets.items():
+    for name, pos in z_stars_avoid.items():
         ax2.plot(*pos, "rx", markersize=12, zorder=5, label=f"Avoid {name}")
 
     ax2.set_xlabel("$z_1$"); ax2.set_ylabel("$z_2$")
     ax2.legend(loc="upper left"); ax2.grid(True, alpha=0.3)
     fig.colorbar(sc2, ax=ax2, label="Time $t$")
-
     # 3. Diffeomorphism Grid Warp
     ax3 = fig.add_subplot(gs[1, 0])
     ax3.set_title("Topological Substrate: $\phi: \mathcal{X} \\to \mathcal{Z}$")
